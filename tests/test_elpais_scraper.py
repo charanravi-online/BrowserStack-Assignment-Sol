@@ -19,53 +19,46 @@ TRANSLATE_HEADERS = {
 }
 
 def scrape_articles(driver):
+    # Load main page and handle cookie popup
     driver.get("https://elpais.com/")
-    # time.sleep(500)
-    
-    
-
     WebDriverWait(driver, 15).until(
         EC.presence_of_element_located((By.ID, "didomi-notice-agree-button"))
     )
-    time.sleep(1)
+    time.sleep(1)  # Brief pause for stability
     driver.find_element(By.ID, "didomi-notice-agree-button").click()        
 
-
+    # Navigate to opinion section
     driver.find_element(By.LINK_TEXT, "Opinión").click()
-    
     WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.CLASS_NAME, "c_t"))
     )
     
-    # Fetch article elements
+    # Get first 10 articles
     articles = driver.find_elements(By.CLASS_NAME, "c")[:10] 
     article_data = []
     
+    # Extract data from each article
     for article in articles:
         try:
-            # Extract title
-            title_elem = article.find_element(By.CLASS_NAME, "c_t")
-            title = title_elem.text.strip()
-            if not title:  # Skip if title empty
+            title = article.find_element(By.CLASS_NAME, "c_t").text.strip()
+            if not title:
                 continue
             
-            # Extract first paragraph if avalable
+            # Get article description if available
             try:
-                content_elem = article.find_element(By.CLASS_NAME, "c_d")
-                content = content_elem.text.strip()
+                content = article.find_element(By.CLASS_NAME, "c_d").text.strip()
             except:
                 content = "No article description"
             
-            # Extract image if available
+            # Try to get article image
             image_url = None
             try:
-                image_elem = article.find_element(By.TAG_NAME, "img")
-                image_url = image_elem.get_attribute("src")
+                image_url = article.find_element(By.TAG_NAME, "img").get_attribute("src")
             except:
                 pass
             
             article_data.append({"title": title, "content": content, "image_url": image_url})
-            if len(article_data) == 5:
+            if len(article_data) == 5:  # Only need first 5 articles
                 break
         except Exception as e:
             print(f"Skipping an article due to error: {e}")
@@ -74,28 +67,29 @@ def scrape_articles(driver):
     return article_data
 
 def download_image(image_url, title):
+    # Save article images locally
     if image_url and title:
         try:
             response = requests.get(image_url, stream=True)
             if response.status_code == 200:
-                # add undersrore instead of space for the image name
                 filename = title.replace(' ', '_')[:50] + ".jpg"
                 with open(filename, 'wb') as f:
                     f.write(response.content)
                 print(f"Downloaded image for '{title}' as {filename}")
         except Exception as e:
-            print(f"Failed to download image for '{title}': {e}")
+            print(f"Failed to download image: {e}")
 
 def translate_titles(article_data):
+    # Translate article titles to English
     for article in article_data:
         payload = {
-            "from": "es",  # Spanish
-            "to": "en",    # English
+            "from": "es",
+            "to": "en",
             "text": article["title"]
         }
         try:
             response = requests.post(TRANSLATE_URL, json=payload, headers=TRANSLATE_HEADERS)
-            response.raise_for_status()  # Raise an error for bad status codes
+            response.raise_for_status()
             translated_text = response.json().get("trans", "Translation failed")
             article["translated_title"] = translated_text
         except requests.exceptions.RequestException as e:

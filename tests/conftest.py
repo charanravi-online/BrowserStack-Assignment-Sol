@@ -14,28 +14,26 @@ load_dotenv()
 # for remote testing on real devices and browsers
 @pytest.fixture
 def driver():
+    # Setup BrowserStack capabilities
     options = webdriver.ChromeOptions()
-    # BrowserStack configuration options
-    # These settings determine which device/browser to use for testing
     bstack_options = {
         'userName': os.getenv('BROWSERSTACK_USERNAME'),
         'accessKey': os.getenv('BROWSERSTACK_ACCESS_KEY'),
-        'deviceName': 'iPhone 13',
-        'osVersion': '15',
-        'browserName': 'safari',
-        'deviceOrientation': 'portrait',
+        'os': 'Windows',
+        'osVersion': '10',
+        'browserName': 'Chrome',
+        'browserVersion': 'latest',
         'projectName': 'El Pais Scraper',
         'buildName': 'El Pais Test',
         'debug': 'true',
-        'networkLogs': 'true',
-        'realMobile': 'true'
+        'networkLogs': 'true'
     }
     options.set_capability('bstack:options', bstack_options)
     
     # Print capabilities for debugging
     print("Setting up with capabilities:", bstack_options)
     
-    # Create a remote WebDriver that connects to BrowserStack's Selenium grid
+    # Connect to BrowserStack
     driver = webdriver.Remote(
         command_executor='https://hub.browserstack.com/wd/hub',
         options=options
